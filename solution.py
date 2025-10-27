@@ -136,23 +136,23 @@ def merge_nearby_points(points: List[Tuple[int, int]], threshold: int = 20) -> L
     return merged
 
 
-def find_roundabouts_hough(binary: np.ndarray) -> List[Tuple[int, int]]:
-    """Find roundabouts using Circle Hough Transform."""
+def find_roundabouts(binary: np.ndarray) -> List[Tuple[int, int]]:
+    """Find roundabouts using Circle Hough Transform (edge detection based)."""
     roundabouts = []
     
-    # Use Circle Hough Transform to detect circular structures
-    # Blur slightly to reduce noise
+    # Use Gaussian blur (smoothing filter from outline)
     blurred = cv2.GaussianBlur(binary, (9, 9), 2)
     
+    # Circle Hough Transform (uses edge detection internally)
     circles = cv2.HoughCircles(
         blurred,
         cv2.HOUGH_GRADIENT,
-        dp=1,               # Inverse ratio of accumulator resolution
-        minDist=150,        # Minimum distance between circle centers
-        param1=50,          # Upper threshold for edge detection
-        param2=35,          # Accumulator threshold for center detection (higher = fewer false positives)
-        minRadius=15,       # Minimum circle radius
-        maxRadius=80        # Maximum circle radius
+        dp=1,
+        minDist=150,
+        param1=50,
+        param2=35,
+        minRadius=15,
+        maxRadius=80
     )
     
     if circles is not None:
@@ -163,16 +163,16 @@ def find_roundabouts_hough(binary: np.ndarray) -> List[Tuple[int, int]]:
     return merge_nearby_points(roundabouts, threshold=50)
 
 
-def find_loops(skeleton: np.ndarray) -> np.ndarray:
-    """Find closed loops in skeleton."""
-    # Find connected components without endpoints
+def find_closed_loops_in_skeleton(skeleton: np.ndarray) -> np.ndarray:
+    """Find closed loops in skeleton by removing endpoints."""
+    # Get endpoints
     endpoints = get_endpoints(skeleton)
     
-    # Remove endpoints temporarily
+    # Remove endpoints temporarily to find closed structures
     no_endpoints = skeleton.copy()
     no_endpoints[endpoints > 0] = 0
     
-    # Find components
+    # Find connected components (these should be closed loops)
     num_labels, labels = cv2.connectedComponents(no_endpoints, connectivity=8)
     loops = np.zeros_like(skeleton)
     
@@ -180,8 +180,8 @@ def find_loops(skeleton: np.ndarray) -> np.ndarray:
         component = (labels == label_id)
         pixel_count = np.sum(component)
         
-        # Must have reasonable size (more lenient)
-        if pixel_count > 20:
+        # Filter by size - roundabouts should have substantial loops
+        if pixel_count > 15:
             loops[component] = 255
     
     return loops
@@ -213,7 +213,7 @@ def detect_intersections_and_roundabouts(input_path: str) -> Tuple[List[Tuple[in
     junction_points = merge_nearby_points(junction_points, threshold=60)
     
     # Roundabout detection - using Circle Hough Transform
-    roundabout_points = find_roundabouts_hough(binary_clean)
+    roundabout_points = find_roundabouts(binary_clean)
     
     return junction_points, roundabout_points
 

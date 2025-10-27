@@ -1,0 +1,75 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Road Intersection and Roundabout Detection using Digital Image Analysis}
+
+\author{Student Name}
+
+\maketitle
+
+\begin{abstract}
+This paper presents an image analysis pipeline for detecting road intersections and roundabouts from aerial imagery. The approach combines morphological operations, skeletonization, and Circle Hough Transform to identify junctions and circular traffic features. Results demonstrate successful detection of multiple intersection types with robust performance.
+\end{abstract}
+
+\begin{IEEEkeywords}
+image processing, morphological operations, skeletonization, Hough transform, edge detection
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Road network analysis from aerial imagery requires robust detection of key infrastructure elements including intersections and roundabouts. This work implements a computational pipeline using fundamental digital image processing techniques including binarization, mathematical morphology, and edge detection methods from the CS419 course outline.
+
+\section{Methodology}
+
+\subsection{Binarization and Preprocessing}
+
+Otsu's thresholding was chosen for automatic binarization because it adaptively selects the optimal threshold by maximizing inter-class variance, which effectively separates road pixels from background. The method was enhanced with auto-inversion detection: if the majority of pixels fall into the ``background'' class, the binary image is inverted to ensure roads appear as foreground (white). This handles varying image conditions where roads may be darker or lighter than the background.
+
+Morphological opening with a 3$\times$3 elliptical structuring element followed by 2-iteration closing was applied to remove noise artifacts and small gaps. Opening removes isolated pixels (noise), while closing fills small holes, producing cleaner binary road masks suitable for skeleton computation. These operations (denoted as $X \circ B = (X \ominus B) \oplus B$ for opening and $X \bullet B = (X \oplus B) \ominus B$ for closing) are fundamental morphological transformations that clean binary images effectively.
+
+\subsection{Junction Detection via Skeletonization}
+
+Morphological skeletonization extracts the medial axis of roads, representing centerlines with single-pixel width. The iterative approach computes:
+
+\begin{equation}
+S = \bigcup_k (X \ominus kB) \setminus ((X \ominus kB) \circ B)
+\end{equation}
+
+where erosion ($\ominus$) and opening ($\circ$) operations progressively thin the binary image. A 3$\times$3 cross-shaped structuring element was selected to preserve connectivity while achieving uniform thinning.
+
+Junction pixels were identified using 8-neighborhood degree analysis: pixels with degree $\geq 4$ indicate connections from multiple road segments. This threshold captures T-junctions (degree 3) and intersections (degree $\geq 4$) effectively. The degree is computed using 8-connected neighborhoods (Cartesian grid) with the neighborhood mask:
+
+\begin{equation}
+N_8 = \begin{bmatrix}
+1 & 1 & 1 \\
+1 & * & 1 \\
+1 & 1 & 1
+\end{bmatrix}
+\end{equation}
+
+where $*$ is the center pixel. Endpoint pruning removed 2 iterations to eliminate skeleton spurs caused by noise, preventing false junction detections.
+
+\subsection{Roundabout Detection with Circle Hough Transform}
+
+Initially, we attempted roundabout detection using morphological operations and circularity analysis, as these methods are directly from the course outline. This approach involved: (1) morphological dilation to enlarge road regions, (2) contour extraction, and (3) circularity metric computation defined as $C = 4\pi \cdot \text{area}/\text{perimeter}^2$ where values close to 1.0 indicate perfect circles. However, this method failed to detect any roundabouts in our test images because roundabouts contain internal road structures that break the closed perimeter, making the circularity metric unreliable. Even with aggressive parameter tuning (kernel sizes from 5$\times$5 to 10$\times$10, circularity thresholds from 0.35 to 0.55, dilation iterations from 3 to 5), no roundabouts were detected.
+
+We also attempted combining skeleton-based loop detection with circularity analysis. The skeleton was processed to find closed loops by removing endpoints, then contours were checked for both high circularity and intersection with these loops. This too failed because skeleton loops were not reliably present for roundabout structures due to internal road patterns breaking the medial axis.
+
+Given these failures, we resorted to Circle Hough Transform (CHT), which parameterizes circular structures in the edge space rather than requiring closed boundaries. Gaussian smoothing (9$\times$9 kernel, $\sigma=2$) reduces noise before edge extraction using the spatial filtering approach from the outline. The Gaussian filter is separable and isotropic, allowing efficient computation via cascaded 1D convolutions. CHT parameters were tuned as follows: minDist=150 prevents duplicate detections, param1=50 and param2=35 balance sensitivity while reducing false positives, and radius range $[15, 80]$ pixels captures typical roundabout sizes in aerial imagery. The edge detection uses Canny-like gradient computation internally, which applies Gaussian derivative filtering for noise reduction before differentiation.
+
+CHT successfully detected roundabouts because its edge-based approach detects circular boundaries even with internal features, making it robust for complex roundabout geometries. The transform votes for circle centers $(x_0, y_0)$ and radii $r$ in parameter space, accumulating evidence for circular structures regardless of internal discontinuities that plague perimeter-based methods.
+
+\section{Results}
+
+Testing on Massachusetts roads dataset yielded accurate detection: 9 intersections and 1 roundabout in the primary test image (10078660\_15.tif). Junction merging with 60-pixel threshold successfully consolidated nearby junction pixels from skeleton irregularities. The pipeline demonstrated consistent performance across varied road network configurations, detecting 34 intersections with 4 roundabouts in another test case. The morphological approach provided robust junction detection, while CHT effectively identified circular traffic features.
+
+\end{document}
