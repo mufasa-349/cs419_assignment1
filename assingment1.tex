@@ -6,13 +6,14 @@
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
+\usepackage{url}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
 \title{Road Intersection and Roundabout Detection using Digital Image Analysis}
 
-\author{Student Name}
+\author{Mustafa Bozyel - 32417}
 
 \maketitle
 
@@ -27,6 +28,52 @@ image processing, morphological operations, skeletonization, Hough transform, ed
 \section{Introduction}
 
 Road network analysis from aerial imagery requires robust detection of key infrastructure elements including intersections and roundabouts. This work implements a computational pipeline using fundamental digital image processing techniques including binarization, mathematical morphology, and edge detection methods from the CS419 course outline.
+
+\section{Implementation}
+
+\subsection{System Requirements and Dependencies}
+
+The implementation is written in Python 3 and requires the following libraries:
+
+\begin{itemize}
+    \item \texttt{opencv-python} (cv2) - For image processing operations including thresholding, morphological operations, and circle detection
+    \item \texttt{numpy} - For array manipulation and numerical computations
+    \item Python standard libraries: \texttt{argparse}, \texttt{math}, \texttt{typing}
+\end{itemize}
+
+Installation can be performed using pip:
+
+\begin{verbatim}
+pip install opencv-python numpy
+\end{verbatim}
+
+\subsection{Usage}
+
+The program can be executed from the command line as follows:
+
+\begin{verbatim}
+python solution.py <input_image_path>
+\end{verbatim}
+
+Optional debug mode saves intermediate processing steps:
+
+\begin{verbatim}
+python solution.py <input_image_path> --debug
+\end{verbatim}
+
+The output consists of intersection and roundabout coordinates printed to stdout in the format:
+\begin{verbatim}
+# Intersections (junctions): N
+intersection: (x, y)
+...
+# Roundabouts: M
+roundabout: (x, y)
+...
+\end{verbatim}
+
+\subsection{Dataset}
+
+The experiments were conducted using aerial imagery from the Massachusetts Roads Dataset~\cite{massachusetts_dataset}, available on Kaggle. This dataset contains high-resolution grayscale aerial images of road networks across Massachusetts, providing diverse intersection patterns and traffic structures suitable for testing the detection pipeline. The test images include various road network configurations from different areas, enabling evaluation of the method's robustness across varying image conditions.
 
 \section{Methodology}
 
@@ -71,5 +118,12 @@ CHT successfully detected roundabouts because its edge-based approach detects ci
 \section{Results}
 
 Testing on Massachusetts roads dataset yielded accurate detection: 9 intersections and 1 roundabout in the primary test image (10078660\_15.tif). Junction merging with 60-pixel threshold successfully consolidated nearby junction pixels from skeleton irregularities. The pipeline demonstrated consistent performance across varied road network configurations, detecting 34 intersections with 4 roundabouts in another test case. The morphological approach provided robust junction detection, while CHT effectively identified circular traffic features.
+
+\section*{References}
+
+\begin{thebibliography}{00}
+\bibitem{massachusetts_dataset}
+``Massachusetts Roads Dataset,'' Kaggle, 2018. [Online]. Available: \url{https://www.kaggle.com/datasets/balraj98/massachusetts-roads-dataset}
+\end{thebibliography}
 
 \end{document}
